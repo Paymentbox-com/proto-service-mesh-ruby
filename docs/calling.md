@@ -54,7 +54,7 @@ the option `"request_timeout" => "2"`.
 
 Every other key is sent as message metadata. The request's `mesh_metadata` is
 not modified. A request with no metadata sends a message whose only metadata is
-`Content-Type`, with no options.
+`Mesh-Content-Type`, with no options.
 
 ## Reply Metadata
 
@@ -67,10 +67,11 @@ handler sets, and the calling side drops them from the reply it receives.
 
 ## Reply Decoding
 
-A `ROUTE` method reads `Grpc-Status` on the reply before the payload. When it
-is set, the payload is decoded as `Google::Rpc::Status` and raised as a
-`MeshError`, whose code is the one inside the `Status`. When it is not set, the
-payload is decoded as the response class.
+A `ROUTE` method reads `Mesh-Status` on the reply before the payload, or
+`Grpc-Status` when the reply has no `Mesh-Status`. When either is set, the
+payload is decoded as `Google::Rpc::Status` and raised as a `MeshError`, whose
+code is the one inside the `Status`. When neither is set, the payload is
+decoded as the response class.
 
 A payload that does not decode raises an `INTERNAL` (13) `MeshError` whose
 message names the expected type, such as
@@ -84,9 +85,25 @@ and from the transport pass through unchanged.
 ## Wire Format
 
 Every message the library sends carries the metadata
-`Content-Type: application/x-protobuf`. A `Content-Type` in the request's
-`mesh_metadata` is overwritten.
+`Mesh-Content-Type: application/x-protobuf`. A `Mesh-Content-Type` in the
+request's `mesh_metadata` is overwritten, and a `Mesh-Status`, `Content-Type`,
+or `Grpc-Status` is dropped.
 
-A reply that reports a `MeshError` also carries `Grpc-Status`, the code as a
+A reply that reports a `MeshError` also carries `Mesh-Status`, the code as a
 decimal integer string, and its payload is the encoded `Google::Rpc::Status`.
 Every other payload is the message's binary protobuf encoding.
+
+## Older Versions
+
+Versions before 0.19.0 send `Content-Type` in place of `Mesh-Content-Type` and
+`Grpc-Status` in place of `Mesh-Status`. Those keys are deprecated, and a later
+version stops reading and writing them.
+
+- A request that carries `Content-Type` without `Mesh-Content-Type` comes from
+  an older version. Its reply also carries `Content-Type`, and `Grpc-Status`
+  beside `Mesh-Status` for a `MeshError`.
+- A `ROUTE` method reads `Grpc-Status` when a reply has no `Mesh-Status`.
+- The first message on a target that carries `Content-Type` without
+  `Mesh-Content-Type`, or `Grpc-Status` without `Mesh-Status`, writes a
+  warning with `Kernel#warn` naming the key and the target. Later messages on
+  that target with the same key write nothing.

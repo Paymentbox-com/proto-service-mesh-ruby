@@ -28,15 +28,19 @@ module ProtoServiceMesh
 
     # Sends +request+ to a route and returns the decoded response, whose
     # mesh_metadata is the reply's metadata without keys that start with
-    # OPTION_PREFIX. Raises MeshError for a reply carrying Grpc-Status, or
-    # INTERNAL when either payload does not decode; either error's
-    # mesh_metadata is the same reply metadata.
+    # OPTION_PREFIX. Raises MeshError for a reply carrying Mesh-Status, or
+    # Grpc-Status when the reply has no Mesh-Status, or INTERNAL when either
+    # payload does not decode; either error's mesh_metadata is the same reply
+    # metadata. A reply that carries Grpc-Status or Content-Type without its
+    # Mesh- replacement comes from an older version, and the first such reply
+    # on the target writes a warning.
     def self.request(rpc, request)
       message, options = outbound(rpc, request)
       reply = client_for(rpc.target).request(message, options)
       reply_metadata = Wire.without_options(reply.metadata)
+      Wire.legacy_content_type?(rpc.target, reply.metadata)
       begin
-        if reply_metadata.key?(Wire::GRPC_STATUS_KEY)
+        if reply_metadata.key?(Wire::MESH_STATUS_KEY) || Wire.legacy_status?(rpc.target, reply.metadata)
           raise MeshError.from_proto(decode(Google::Rpc::Status, reply.payload))
         end
 

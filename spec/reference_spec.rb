@@ -46,7 +46,7 @@ RSpec.describe "the reference Shop service and client" do
     Shop::OrderClient.placed(placed)
 
     expect(found).to eq(Shop::Order.new(id: "o-1", item: "r1"))
-    expect(found.mesh_metadata).to eq({"Region" => "west", "Content-Type" => "application/x-protobuf"})
+    expect(found.mesh_metadata).to eq({"Region" => "west", "Mesh-Content-Type" => "application/x-protobuf"})
     expect(orders.events).to eq([[Shop::Order.new(id: "o-1"), "e1"]])
     expect(rpc_runtime.stop(1)).to be(true)
     expect { Shop::OrderClient.place(Shop::Order.new(id: "o-1")) }.to raise_error(MemoryTransport::NoReceiver)
@@ -60,7 +60,7 @@ RSpec.describe "the reference Shop service and client" do
       expect(error.code).to eq(:INVALID_ARGUMENT)
       expect(error.message).to eq("id is required")
       expect(error.details.first.unpack(Google::Rpc::BadRequest).field_violations.first.field).to eq("id")
-      expect(error.mesh_metadata).to eq({"Retry-After" => "30", "Content-Type" => "application/x-protobuf", "Grpc-Status" => "3"})
+      expect(error.mesh_metadata).to eq({"Retry-After" => "30", "Mesh-Content-Type" => "application/x-protobuf", "Mesh-Status" => "3"})
     end
   end
 end

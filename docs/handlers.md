@@ -102,8 +102,8 @@ end
 ```
 
 A `MeshError` becomes a reply whose payload is the encoded
-`Google::Rpc::Status` and whose metadata carries `Grpc-Status`, the code as a
-decimal integer string, beside `Content-Type`.
+`Google::Rpc::Status` and whose metadata carries `Mesh-Status`, the code as a
+decimal integer string, beside `Mesh-Content-Type`.
 
 Any other `StandardError`, including a response that is not an instance of the
 rpc method's output class, is reported the same way as `UNKNOWN` (2), with the
@@ -127,10 +127,10 @@ error's `mesh_metadata`, which the error takes on construction as
 `mesh_metadata:` or through `mesh_metadata=`. The `UNKNOWN` reply for any other
 failure carries only the library's keys.
 
-The library writes `Content-Type` and `Grpc-Status` over the application's
-values, so its own values win, and a successful reply carries no
-`Grpc-Status`. Keys that start with `Mesh-Option-` are removed from the reply's
-metadata.
+The library sets `Mesh-Content-Type` and `Mesh-Status` itself, along with the
+deprecated `Content-Type` and `Grpc-Status`, and drops the application's
+values for all four. A successful reply carries no status. Keys that start
+with `Mesh-Option-` are removed from the reply's metadata.
 
 ```ruby
 def place(request)

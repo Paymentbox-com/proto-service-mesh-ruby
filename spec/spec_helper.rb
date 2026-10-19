@@ -14,5 +14,6 @@ RSpec.configure do |config|
   config.before do
     ProtoServiceMesh.instance_variable_set(:@transport_router, ProtoServiceMesh::TransportRouter.new)
     ProtoServiceMesh.instance_variable_set(:@registry, ProtoServiceMesh::Registry.new)
+    ProtoServiceMesh::Wire.instance_variable_set(:@warned, {})
   end
 end

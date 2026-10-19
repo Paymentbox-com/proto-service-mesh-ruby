@@ -21,17 +21,17 @@ RSpec.describe ProtoServiceMesh::RPCClient do
   describe "a route method" do
     it "sends the encoded request with its metadata to the target's transport and decodes the reply" do
       response = Shop::Order.new(id: "O-1")
-      client = transport_client { reply({"Content-Type" => "application/x-protobuf", "Request-Id" => "r1"}, response.to_proto) }
+      client = transport_client { reply({"Mesh-Content-Type" => "application/x-protobuf", "Request-Id" => "r1"}, response.to_proto) }
       request = order({"Request-Id" => "r1"}, id: "o-1")
 
       result = Shop::OrderClient.place(request)
 
       expect(result).to eq(response)
-      expect(result.mesh_metadata).to eq({"Content-Type" => "application/x-protobuf", "Request-Id" => "r1"})
+      expect(result.mesh_metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf", "Request-Id" => "r1"})
       message, options = client.requests.first
       expect(client.requests.size).to eq(1)
       expect(message.target).to eq(Shop::OrderTargets::PLACE)
-      expect(message.metadata).to eq({"Request-Id" => "r1", "Content-Type" => "application/x-protobuf"})
+      expect(message.metadata).to eq({"Request-Id" => "r1", "Mesh-Content-Type" => "application/x-protobuf"})
       expect(Shop::Order.decode(message.payload)).to eq(Shop::Order.new(id: "o-1"))
       expect(options).to eq({})
       expect(request.mesh_metadata).to eq({"Request-Id" => "r1"})
@@ -44,9 +44,19 @@ RSpec.describe ProtoServiceMesh::RPCClient do
       Shop::OrderClient.place(request)
 
       message, options = client.requests.first
-      expect(message.metadata).to eq({"Request-Id" => "r1", "Content-Type" => "application/x-protobuf"})
+      expect(message.metadata).to eq({"Request-Id" => "r1", "Mesh-Content-Type" => "application/x-protobuf"})
       expect(options).to eq({"request_timeout" => "2"})
       expect(request.mesh_metadata).to eq({"Request-Id" => "r1", "Mesh-Option-request_timeout" => "2"})
+    end
+
+    it "replaces the wire keys set on the request" do
+      client = transport_client { reply({}, Shop::Order.new.to_proto) }
+      request = order({"Mesh-Content-Type" => "text/plain", "Mesh-Status" => "5", "Content-Type" => "text/plain", "Grpc-Status" => "5"})
+
+      Shop::OrderClient.place(request)
+
+      message, _options = client.requests.first
+      expect(message.metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf"})
     end
 
     it "drops Mesh-Option- keys from the reply's metadata on the response" do
@@ -57,41 +67,53 @@ RSpec.describe ProtoServiceMesh::RPCClient do
       expect(result.mesh_metadata).to eq({"Request-Id" => "r1"})
     end
 
-    it "sends Content-Type with no request metadata or options" do
+    it "sends Mesh-Content-Type with no request metadata or options" do
       client = transport_client { reply({}, Shop::Order.new.to_proto) }
 
       Shop::OrderClient.place(Shop::Order.new)
 
       message, options = client.requests.first
-      expect(message.metadata).to eq({"Content-Type" => "application/x-protobuf"})
+      expect(message.metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf"})
       expect(options).to eq({})
     end
 
-    it "raises the MeshError a reply with Grpc-Status carries, with the reply's metadata without Mesh-Option- keys" do
+    it "raises the MeshError a reply with Mesh-Status carries, with the reply's metadata without Mesh-Option- keys" do
       info = Google::Rpc::ErrorInfo.new(reason: "ORDER_CANCELLED", domain: "shop")
       status = Google::Rpc::Status.new(code: 5, message: "no such order", details: [Google::Protobuf::Any.pack(info)])
-      transport_client { reply({"Content-Type" => "application/x-protobuf", "Grpc-Status" => "5", "Retry-After" => "30", "Mesh-Option-x" => "1"}, status.to_proto) }
+      transport_client { reply({"Mesh-Content-Type" => "application/x-protobuf", "Mesh-Status" => "5", "Retry-After" => "30", "Mesh-Option-x" => "1"}, status.to_proto) }
 
       expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(ProtoServiceMesh::NotFoundError) do |error|
         expect(error.code).to eq(:NOT_FOUND)
         expect(error.message).to eq("no such order")
         expect(error.details.map { |d| d.unpack(Google::Rpc::ErrorInfo) }).to eq([info])
-        expect(error.mesh_metadata).to eq({"Content-Type" => "application/x-protobuf", "Grpc-Status" => "5", "Retry-After" => "30"})
+        expect(error.mesh_metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf", "Mesh-Status" => "5", "Retry-After" => "30"})
       end
     end
 
+    it "raises the MeshError a reply from an older version carries with Grpc-Status, and warns" do
+      status = Google::Rpc::Status.new(code: 5, message: "no such order")
+      transport_client { reply({"Content-Type" => "application/x-protobuf", "Grpc-Status" => "5"}, status.to_proto) }
+
+      expect {
+        expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(ProtoServiceMesh::NotFoundError, "no such order")
+      }.to output(
+        "proto_service_mesh: a message on [\"shop\", \"OrderService\", \"Place\"] carries the deprecated metadata key Content-Type in place of Mesh-Content-Type; the sender runs an older version\n" \
+        "proto_service_mesh: a message on [\"shop\", \"OrderService\", \"Place\"] carries the deprecated metadata key Grpc-Status in place of Mesh-Status; the sender runs an older version\n"
+      ).to_stderr
+    end
+
     it "raises INTERNAL with the reply's metadata when the response does not decode" do
-      transport_client { reply({"Content-Type" => "application/x-protobuf", "Request-Id" => "r1"}, "\x80".b) }
+      transport_client { reply({"Mesh-Content-Type" => "application/x-protobuf", "Request-Id" => "r1"}, "\x80".b) }
 
       expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(ProtoServiceMesh::MeshError) do |error|
         expect(error.code).to eq(:INTERNAL)
         expect(error.message).to include("shop.Order")
-        expect(error.mesh_metadata).to eq({"Content-Type" => "application/x-protobuf", "Request-Id" => "r1"})
+        expect(error.mesh_metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf", "Request-Id" => "r1"})
       end
     end
 
     it "raises INTERNAL when the Status does not decode" do
-      transport_client { reply({"Grpc-Status" => "5"}, "\x80".b) }
+      transport_client { reply({"Mesh-Status" => "5"}, "\x80".b) }
 
       expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(ProtoServiceMesh::MeshError) do |error|
         expect(error.code).to eq(:INTERNAL)
@@ -128,7 +150,7 @@ RSpec.describe ProtoServiceMesh::RPCClient do
       message, options = client.publishes.first
       expect(client.publishes.size).to eq(1)
       expect(message.target).to eq(Shop::OrderTargets::PLACED)
-      expect(message.metadata).to eq({"Event-Id" => "e1", "Content-Type" => "application/x-protobuf"})
+      expect(message.metadata).to eq({"Event-Id" => "e1", "Mesh-Content-Type" => "application/x-protobuf"})
       expect(Shop::Order.decode(message.payload)).to eq(Shop::Order.new(id: "o-1"))
       expect(options).to eq({"flush" => "1"})
     end

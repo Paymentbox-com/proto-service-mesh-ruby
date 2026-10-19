@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe ProtoServiceMesh::RPCService do
-  def inbound(target, payload, metadata = {"Content-Type" => "application/x-protobuf"})
+  def inbound(target, payload, metadata = {"Mesh-Content-Type" => "application/x-protobuf"})
     ServiceMesh::Message.new(target: target, metadata: metadata, payload: payload)
   end
 
@@ -50,7 +50,7 @@ RSpec.describe ProtoServiceMesh::RPCService do
   end
 
   describe "an endpoint handler" do
-    it "decodes the request with the inbound metadata on it and encodes the response with Content-Type" do
+    it "decodes the request with the inbound metadata on it and encodes the response with Mesh-Content-Type" do
       seen = nil
       service = Class.new(Shop::OrderService) do
         define_method(:place) do |request|
@@ -58,13 +58,13 @@ RSpec.describe ProtoServiceMesh::RPCService do
           Shop::Order.new(id: request.id.upcase, item: "found")
         end
       end.new
-      metadata = {"Content-Type" => "application/x-protobuf", "Request-Id" => "r1"}
+      metadata = {"Mesh-Content-Type" => "application/x-protobuf", "Request-Id" => "r1"}
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new(id: "o-1").to_proto, metadata))
 
       expect(seen).to eq([Shop::Order.new(id: "o-1"), metadata])
       expect(reply.target).to eq(Shop::OrderTargets::PLACE)
-      expect(reply.metadata).to eq({"Content-Type" => "application/x-protobuf"})
+      expect(reply.metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf"})
       expect(Shop::Order.decode(reply.payload)).to eq(Shop::Order.new(id: "O-1", item: "found"))
     end
 
@@ -79,7 +79,7 @@ RSpec.describe ProtoServiceMesh::RPCService do
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new(id: "o-1").to_proto))
 
-      expect(reply.metadata).to eq({"Request-Id" => "r1", "Region" => "west", "Content-Type" => "application/x-protobuf"})
+      expect(reply.metadata).to eq({"Request-Id" => "r1", "Region" => "west", "Mesh-Content-Type" => "application/x-protobuf"})
       expect(Shop::Order.decode(reply.payload)).to eq(Shop::Order.new(id: "o-1"))
     end
 
@@ -93,21 +93,21 @@ RSpec.describe ProtoServiceMesh::RPCService do
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new.to_proto))
 
-      expect(reply.metadata).to eq({"Request-Id" => "r1", "Content-Type" => "application/x-protobuf"})
+      expect(reply.metadata).to eq({"Request-Id" => "r1", "Mesh-Content-Type" => "application/x-protobuf"})
       expect(Shop::Order.decode(reply.payload)).to eq(Shop::Order.new(id: "o-1"))
     end
 
-    it "overwrites Content-Type and drops Grpc-Status set on a successful response" do
+    it "replaces the wire keys set on a successful response" do
       service = Class.new(Shop::OrderService) do
         def place(request)
-          request.mesh_metadata = {"Content-Type" => "text/plain", "Grpc-Status" => "5"}
+          request.mesh_metadata = {"Mesh-Content-Type" => "text/plain", "Mesh-Status" => "5", "Content-Type" => "text/plain", "Grpc-Status" => "5"}
           request
         end
       end.new
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new.to_proto))
 
-      expect(reply.metadata).to eq({"Content-Type" => "application/x-protobuf"})
+      expect(reply.metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf"})
     end
 
     it "drops Mesh-Option- keys set on a response" do
@@ -120,10 +120,10 @@ RSpec.describe ProtoServiceMesh::RPCService do
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new.to_proto))
 
-      expect(reply.metadata).to eq({"Request-Id" => "r1", "Content-Type" => "application/x-protobuf"})
+      expect(reply.metadata).to eq({"Request-Id" => "r1", "Mesh-Content-Type" => "application/x-protobuf"})
     end
 
-    it "replies with the encoded Status and Grpc-Status when the handler raises a MeshError" do
+    it "replies with the encoded Status and Mesh-Status when the handler raises a MeshError" do
       info = Google::Rpc::ErrorInfo.new(reason: "ORDER_CANCELLED", domain: "shop")
       service = Class.new(Shop::OrderService) do
         define_method(:place) { |_request| raise ProtoServiceMesh::MeshError.new(:NOT_FOUND, "no such order", info) }
@@ -131,7 +131,7 @@ RSpec.describe ProtoServiceMesh::RPCService do
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new.to_proto))
 
-      expect(reply.metadata).to eq({"Content-Type" => "application/x-protobuf", "Grpc-Status" => "5"})
+      expect(reply.metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf", "Mesh-Status" => "5"})
       status = status_of(reply)
       expect(status.code).to eq(5)
       expect(status.message).to eq("no such order")
@@ -147,19 +147,19 @@ RSpec.describe ProtoServiceMesh::RPCService do
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new.to_proto))
 
-      expect(reply.metadata).to eq({"Retry-After" => "30", "Content-Type" => "application/x-protobuf", "Grpc-Status" => "5"})
+      expect(reply.metadata).to eq({"Retry-After" => "30", "Mesh-Content-Type" => "application/x-protobuf", "Mesh-Status" => "5"})
     end
 
-    it "overwrites Content-Type and Grpc-Status set on a MeshError" do
+    it "replaces the wire keys set on a MeshError" do
       service = Class.new(Shop::OrderService) do
         def place(_request)
-          raise ProtoServiceMesh::NotFoundError.new("no such order", mesh_metadata: {"Content-Type" => "text/plain", "Grpc-Status" => "0"})
+          raise ProtoServiceMesh::NotFoundError.new("no such order", mesh_metadata: {"Mesh-Content-Type" => "text/plain", "Mesh-Status" => "0", "Content-Type" => "text/plain", "Grpc-Status" => "0"})
         end
       end.new
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new.to_proto))
 
-      expect(reply.metadata).to eq({"Content-Type" => "application/x-protobuf", "Grpc-Status" => "5"})
+      expect(reply.metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf", "Mesh-Status" => "5"})
     end
 
     it "drops Mesh-Option- keys set on a MeshError" do
@@ -171,7 +171,7 @@ RSpec.describe ProtoServiceMesh::RPCService do
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new.to_proto))
 
-      expect(reply.metadata).to eq({"Retry-After" => "30", "Content-Type" => "application/x-protobuf", "Grpc-Status" => "5"})
+      expect(reply.metadata).to eq({"Retry-After" => "30", "Mesh-Content-Type" => "application/x-protobuf", "Mesh-Status" => "5"})
     end
 
     it "reports any other exception as UNKNOWN with its message" do
@@ -181,7 +181,7 @@ RSpec.describe ProtoServiceMesh::RPCService do
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new.to_proto))
 
-      expect(reply.metadata).to eq({"Content-Type" => "application/x-protobuf", "Grpc-Status" => "2"})
+      expect(reply.metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf", "Mesh-Status" => "2"})
       expect(status_of(reply)).to eq(Google::Rpc::Status.new(code: 2, message: "store is down"))
     end
 
@@ -192,7 +192,7 @@ RSpec.describe ProtoServiceMesh::RPCService do
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new.to_proto))
 
-      expect(reply.metadata["Grpc-Status"]).to eq("2")
+      expect(reply.metadata["Mesh-Status"]).to eq("2")
       expect(status_of(reply).message).to eq("place returned Google::Rpc::Status, expected Shop::Order")
     end
 
@@ -215,19 +215,67 @@ RSpec.describe ProtoServiceMesh::RPCService do
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, "\x80".b))
 
       expect(called).to be(false)
-      expect(reply.metadata["Grpc-Status"]).to eq("13")
+      expect(reply.metadata["Mesh-Status"]).to eq("13")
       expect(status_of(reply).code).to eq(13)
       expect(status_of(reply).message).to start_with("request does not decode as shop.Order: ")
     end
   end
 
+  describe "an endpoint handler serving a request from an older version" do
+    def older(payload)
+      inbound(Shop::OrderTargets::PLACE, payload, {"Content-Type" => "application/x-protobuf"})
+    end
+
+    it "replies with Content-Type beside Mesh-Content-Type" do
+      service = Class.new(Shop::OrderService) do
+        def place(request) = request
+      end.new
+
+      reply = service.endpoints.first.handler.call(older(Shop::Order.new.to_proto))
+
+      expect(reply.metadata).to eq({"Mesh-Content-Type" => "application/x-protobuf", "Content-Type" => "application/x-protobuf"})
+    end
+
+    it "replies to a MeshError with Grpc-Status beside Mesh-Status" do
+      service = Class.new(Shop::OrderService) do
+        def place(_request) = raise(ProtoServiceMesh::NotFoundError, "no such order")
+      end.new
+
+      reply = service.endpoints.first.handler.call(older(Shop::Order.new.to_proto))
+
+      expect(reply.metadata).to eq({
+        "Mesh-Content-Type" => "application/x-protobuf", "Content-Type" => "application/x-protobuf",
+        "Mesh-Status" => "5", "Grpc-Status" => "5"
+      })
+    end
+
+    it "warns once for the target" do
+      service = Class.new(Shop::OrderService) do
+        def place(request) = request
+      end.new
+
+      expect { 2.times { service.endpoints.first.handler.call(older(Shop::Order.new.to_proto)) } }
+        .to output("proto_service_mesh: a message on [\"shop\", \"OrderService\", \"Place\"] carries the deprecated metadata key Content-Type in place of Mesh-Content-Type; the sender runs an older version\n").to_stderr
+    end
+  end
+
   describe "a subscriber handler" do
+    it "warns once for the target on messages from an older version" do
+      service = Class.new(Shop::OrderService) do
+        def placed(_request) = nil
+      end.new
+      older = inbound(Shop::OrderTargets::PLACED, Shop::Order.new.to_proto, {"Content-Type" => "application/x-protobuf"})
+
+      expect { 2.times { service.subscribers.first.handler.call(older) } }
+        .to output("proto_service_mesh: a message on [\"shop\", \"OrderService\", \"Placed\"] carries the deprecated metadata key Content-Type in place of Mesh-Content-Type; the sender runs an older version\n").to_stderr
+    end
+
     it "decodes the request with the inbound metadata on it and returns nil" do
       seen = nil
       service = Class.new(Shop::OrderService) do
         define_method(:placed) { |request| seen = [request, request.mesh_metadata] }
       end.new
-      metadata = {"Content-Type" => "application/x-protobuf", "Event-Id" => "e1"}
+      metadata = {"Mesh-Content-Type" => "application/x-protobuf", "Event-Id" => "e1"}
 
       result = service.subscribers.first.handler.call(inbound(Shop::OrderTargets::PLACED, Shop::Order.new(id: "o-1").to_proto, metadata))
 

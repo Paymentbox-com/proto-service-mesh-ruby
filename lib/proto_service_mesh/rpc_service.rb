@@ -6,7 +6,9 @@ module ProtoServiceMesh
   # serves, taking the decoded request, whose mesh_metadata is the inbound
   # message metadata. A route method returns the response; the response's
   # mesh_metadata, without keys that start with OPTION_PREFIX, is the reply's
-  # metadata. The same holds for a raised MeshError.
+  # metadata. The same holds for a raised MeshError. A request that carries
+  # Content-Type without Mesh-Content-Type comes from an older version, and its
+  # reply also carries Content-Type and, for a MeshError, Grpc-Status.
   class RPCService
     extend RpcDSL
 
@@ -41,10 +43,11 @@ module ProtoServiceMesh
 
     def endpoint_handler(rpc)
       lambda do |message|
+        legacy = Wire.legacy_content_type?(rpc.target, message.metadata)
         request = begin
           decode_inbound(rpc, message)
         rescue Google::Protobuf::ParseError => e
-          next status_reply(message, MeshError.new(:INTERNAL, e.message))
+          next status_reply(message, MeshError.new(:INTERNAL, e.message), legacy)
         end
 
         response = public_send(rpc.name, request)
@@ -52,17 +55,18 @@ module ProtoServiceMesh
           raise TypeError, "#{rpc.name} returned #{response.class}, expected #{rpc.output}"
         end
 
-        metadata = Wire.metadata(Wire.without_options(response.mesh_metadata).except(Wire::GRPC_STATUS_KEY))
+        metadata = Wire.metadata(Wire.without_options(response.mesh_metadata), legacy: legacy)
         ServiceMesh::Message.new(target: message.target, metadata: metadata, payload: response.to_proto)
       rescue MeshError => e
-        status_reply(message, e)
+        status_reply(message, e, legacy)
       rescue => e
-        status_reply(message, MeshError.new(:UNKNOWN, e.message))
+        status_reply(message, MeshError.new(:UNKNOWN, e.message), legacy)
       end
     end
 
     def subscriber_handler(rpc)
       lambda do |message|
+        Wire.legacy_content_type?(rpc.target, message.metadata)
         public_send(rpc.name, decode_inbound(rpc, message))
         nil
       end
@@ -81,8 +85,9 @@ module ProtoServiceMesh
       request
     end
 
-    def status_reply(message, error)
-      ServiceMesh::Message.new(target: message.target, metadata: Wire.status_metadata(error, Wire.without_options(error.mesh_metadata)), payload: error.proto.to_proto)
+    def status_reply(message, error, legacy)
+      metadata = Wire.status_metadata(error, Wire.without_options(error.mesh_metadata), legacy: legacy)
+      ServiceMesh::Message.new(target: message.target, metadata: metadata, payload: error.proto.to_proto)
     end
   end
 end
