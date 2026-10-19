@@ -1,5 +1,5 @@
 [tools]
 # Go runs proto-service-mesh-gen, which generates the reference output in spec/support/testproto.
-go = "1.26.6"
+go = "1.26.9"
 ruby = "3.3.6"
 just = "latest"
