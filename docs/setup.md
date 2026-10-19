@@ -8,18 +8,18 @@ step.
 
 ## Configuring the TransportRouter at Boot
 
-`GrpcServiceMesh.transport_router` is the process-wide router. It holds one
+`ProtoServiceMesh.transport_router` is the process-wide router. It holds one
 `Client` per transport name. The application builds one transport `Client`
 per transport name its definitions use, with the transport's configuration and
 the generated `ServiceMap` for that transport, and adds it under that name.
 The transport gem is a dependency of the application, not of this library.
 
 ```ruby
-require "grpc_service_mesh"
+require "proto_service_mesh"
 require "service_maps"
 
 # client is the transport's Client, built from its configuration and ServiceMaps::MEM.
-GrpcServiceMesh.add_transport("mem", client)
+ProtoServiceMesh.add_transport("mem", client)
 ```
 
 The application owns each client and the connection it holds. Clients are
@@ -30,14 +30,14 @@ generated takes a router argument.
 `transport_router.client(name)` returns the client the application added under
 `name`, and it is what every generated client method on that transport sends
 through. `add_transport` under a name already present replaces the client.
-Looking up a name that was not added raises `GrpcServiceMesh::UnknownTransport`,
+Looking up a name that was not added raises `ProtoServiceMesh::UnknownTransport`,
 listed under [Library Errors](mesherror.md#library-errors).
 
 A process that only calls builds its clients, adds them, and runs
 `transport_router.close` before exit, so each transport sends what it has
 buffered. `close` closes every client, even when some of them fail to close. It
 returns `nil` when every client closed, and otherwise raises
-`GrpcServiceMesh::CloseFailed`, whose `failures` maps each transport name to the
+`ProtoServiceMesh::CloseFailed`, whose `failures` maps each transport name to the
 exception its client raised.
 
 An `RPCRuntime` for a transport is built on the router's client for that
@@ -47,13 +47,13 @@ transport, and its `stop` closes that client as well.
 
 The application implements a generated `RPCService` as described under
 [Handlers](handlers.md), and registers an instance in
-`GrpcServiceMesh.registry`. Each rpc method it implements becomes a Service
+`ProtoServiceMesh.registry`. Each rpc method it implements becomes a Service
 Mesh API `Endpoint` or `Subscriber`, which an `RPCRuntime` passes to the
 transport's `Runtime`. An rpc method the subclass does not define is not
 served.
 
 ```ruby
-GrpcServiceMesh.register(Orders.new(db_model, logger))
+ProtoServiceMesh.register(Orders.new(db_model, logger))
 ```
 
 The registry keeps every endpoint and subscriber registered with it. If two
@@ -66,7 +66,7 @@ endpoints or subscribers for it.
 service's endpoints and subscribers, by target:
 
 ```ruby
-GrpcServiceMesh.register(Orders.new(db_model, logger),
+ProtoServiceMesh.register(Orders.new(db_model, logger),
   consumer_groups: {Shop::OrderTargets::PLACED => "billing-ledger"})
 ```
 
@@ -111,7 +111,7 @@ it, which is the one added under the transport's name.
 Services registered after the constructor has run are not served.
 
 ```ruby
-runtime = GrpcServiceMesh::RPCRuntime.new(transport: "mem", deployment_group: "shop", config: {}, runtime: build_runtime)
+runtime = ProtoServiceMesh::RPCRuntime.new(transport: "mem", deployment_group: "shop", config: {}, runtime: build_runtime)
 # raises a library error, or whatever build_runtime raises
 runtime.start # raises the transport's error
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module GrpcServiceMesh
+module ProtoServiceMesh
   # One rpc method as the generated code declares it. +owner+ is the class
   # the declaration appeared in. +consumer_group+ is the method's
   # consumer_group option, or nil when it has none.

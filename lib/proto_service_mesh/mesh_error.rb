@@ -6,7 +6,7 @@ require "google/rpc/code_pb"
 require "google/rpc/status_pb"
 require "google/rpc/error_details_pb"
 
-module GrpcServiceMesh
+module ProtoServiceMesh
   # The application error. A ROUTE handler raises it; the caller rescues it.
   # It wraps a google.rpc.Status and carries the message metadata of the
   # reply that reports it.

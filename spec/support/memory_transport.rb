@@ -114,7 +114,7 @@ module MemoryTransport
     end
   end
 
-  # The runtime lambda GrpcServiceMesh::RPCRuntime.new takes.
+  # The runtime lambda ProtoServiceMesh::RPCRuntime.new takes.
   def self.runtime_lambda
     ->(client, config, endpoints:, subscribers:) { Runtime.new(client, config, endpoints: endpoints, subscribers: subscribers) }
   end

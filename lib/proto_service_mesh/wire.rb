@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module GrpcServiceMesh
+module ProtoServiceMesh
   # The start of an outgoing metadata key that is a transport option. A client
   # method passes each such key, with the prefix removed, to the transport's
   # request or publish options, and sends the other keys as message metadata.

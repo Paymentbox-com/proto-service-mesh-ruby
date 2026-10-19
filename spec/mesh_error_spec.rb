@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe GrpcServiceMesh::MeshError do
+RSpec.describe ProtoServiceMesh::MeshError do
   it "is a StandardError built from a code name and a message" do
     error = described_class.new(:NOT_FOUND, "no such order")
 
@@ -16,7 +16,7 @@ RSpec.describe GrpcServiceMesh::MeshError do
   it "carries the metadata given on construction through to the subclass" do
     error = described_class.new(:NOT_FOUND, "no such order", mesh_metadata: {"Retry-After" => "30"})
 
-    expect(error).to be_an_instance_of(GrpcServiceMesh::NotFoundError)
+    expect(error).to be_an_instance_of(ProtoServiceMesh::NotFoundError)
     expect(error.mesh_metadata).to eq({"Retry-After" => "30"})
   end
 
@@ -25,13 +25,13 @@ RSpec.describe GrpcServiceMesh::MeshError do
   end
 
   it "raises UNKNOWN from UnknownError and a message" do
-    expect { raise GrpcServiceMesh::UnknownError, "store is down" }.to raise_error(GrpcServiceMesh::UnknownError, "store is down") do |error|
+    expect { raise ProtoServiceMesh::UnknownError, "store is down" }.to raise_error(ProtoServiceMesh::UnknownError, "store is down") do |error|
       expect(error.code).to eq(:UNKNOWN)
     end
   end
 
   it "raises a subclass from the class and a message" do
-    expect { raise GrpcServiceMesh::NotFoundError, "no such order" }.to raise_error(GrpcServiceMesh::NotFoundError, "no such order") do |error|
+    expect { raise ProtoServiceMesh::NotFoundError, "no such order" }.to raise_error(ProtoServiceMesh::NotFoundError, "no such order") do |error|
       expect(error.code).to eq(:NOT_FOUND)
       expect(error.details).to eq([])
     end
@@ -40,14 +40,14 @@ RSpec.describe GrpcServiceMesh::MeshError do
   it "builds the subclass for a named code" do
     error = described_class.new(:NOT_FOUND, "no such order")
 
-    expect(error).to be_an_instance_of(GrpcServiceMesh::NotFoundError)
+    expect(error).to be_an_instance_of(ProtoServiceMesh::NotFoundError)
     expect(error.code).to eq(:NOT_FOUND)
   end
 
   it "builds the subclass from a proto" do
     error = described_class.from_proto(Google::Rpc::Status.new(code: 7, message: "nope"))
 
-    expect(error).to be_an_instance_of(GrpcServiceMesh::PermissionDeniedError)
+    expect(error).to be_an_instance_of(ProtoServiceMesh::PermissionDeniedError)
     expect(error.message).to eq("nope")
   end
 
@@ -59,7 +59,7 @@ RSpec.describe GrpcServiceMesh::MeshError do
   it "builds a subclass directly from a message and details" do
     info = Google::Rpc::ErrorInfo.new(reason: "ORDER_MISSING")
 
-    error = GrpcServiceMesh::NotFoundError.new("no such order", info)
+    error = ProtoServiceMesh::NotFoundError.new("no such order", info)
 
     expect(error).to be_a(described_class)
     expect(error.code).to eq(:NOT_FOUND)
@@ -68,22 +68,22 @@ RSpec.describe GrpcServiceMesh::MeshError do
   end
 
   it "gives every subclass its own code" do
-    expect(GrpcServiceMesh::CancelledError.new("").code).to eq(:CANCELLED)
-    expect(GrpcServiceMesh::UnknownError.new("").code).to eq(:UNKNOWN)
-    expect(GrpcServiceMesh::InvalidArgumentError.new("").code).to eq(:INVALID_ARGUMENT)
-    expect(GrpcServiceMesh::DeadlineExceededError.new("").code).to eq(:DEADLINE_EXCEEDED)
-    expect(GrpcServiceMesh::NotFoundError.new("").code).to eq(:NOT_FOUND)
-    expect(GrpcServiceMesh::AlreadyExistsError.new("").code).to eq(:ALREADY_EXISTS)
-    expect(GrpcServiceMesh::PermissionDeniedError.new("").code).to eq(:PERMISSION_DENIED)
-    expect(GrpcServiceMesh::UnauthenticatedError.new("").code).to eq(:UNAUTHENTICATED)
-    expect(GrpcServiceMesh::ResourceExhaustedError.new("").code).to eq(:RESOURCE_EXHAUSTED)
-    expect(GrpcServiceMesh::FailedPreconditionError.new("").code).to eq(:FAILED_PRECONDITION)
-    expect(GrpcServiceMesh::AbortedError.new("").code).to eq(:ABORTED)
-    expect(GrpcServiceMesh::OutOfRangeError.new("").code).to eq(:OUT_OF_RANGE)
-    expect(GrpcServiceMesh::UnimplementedError.new("").code).to eq(:UNIMPLEMENTED)
-    expect(GrpcServiceMesh::InternalError.new("").code).to eq(:INTERNAL)
-    expect(GrpcServiceMesh::UnavailableError.new("").code).to eq(:UNAVAILABLE)
-    expect(GrpcServiceMesh::DataLossError.new("").code).to eq(:DATA_LOSS)
+    expect(ProtoServiceMesh::CancelledError.new("").code).to eq(:CANCELLED)
+    expect(ProtoServiceMesh::UnknownError.new("").code).to eq(:UNKNOWN)
+    expect(ProtoServiceMesh::InvalidArgumentError.new("").code).to eq(:INVALID_ARGUMENT)
+    expect(ProtoServiceMesh::DeadlineExceededError.new("").code).to eq(:DEADLINE_EXCEEDED)
+    expect(ProtoServiceMesh::NotFoundError.new("").code).to eq(:NOT_FOUND)
+    expect(ProtoServiceMesh::AlreadyExistsError.new("").code).to eq(:ALREADY_EXISTS)
+    expect(ProtoServiceMesh::PermissionDeniedError.new("").code).to eq(:PERMISSION_DENIED)
+    expect(ProtoServiceMesh::UnauthenticatedError.new("").code).to eq(:UNAUTHENTICATED)
+    expect(ProtoServiceMesh::ResourceExhaustedError.new("").code).to eq(:RESOURCE_EXHAUSTED)
+    expect(ProtoServiceMesh::FailedPreconditionError.new("").code).to eq(:FAILED_PRECONDITION)
+    expect(ProtoServiceMesh::AbortedError.new("").code).to eq(:ABORTED)
+    expect(ProtoServiceMesh::OutOfRangeError.new("").code).to eq(:OUT_OF_RANGE)
+    expect(ProtoServiceMesh::UnimplementedError.new("").code).to eq(:UNIMPLEMENTED)
+    expect(ProtoServiceMesh::InternalError.new("").code).to eq(:INTERNAL)
+    expect(ProtoServiceMesh::UnavailableError.new("").code).to eq(:UNAVAILABLE)
+    expect(ProtoServiceMesh::DataLossError.new("").code).to eq(:DATA_LOSS)
   end
 
   it "accepts the code as a number" do

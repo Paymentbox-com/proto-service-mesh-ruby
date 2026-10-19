@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-module GrpcServiceMesh
+module ProtoServiceMesh
   # Collects every Endpoint and Subscriber the process serves. The process
-  # registry is GrpcServiceMesh.registry.
+  # registry is ProtoServiceMesh.registry.
   class Registry
     def initialize
       @endpoints = []

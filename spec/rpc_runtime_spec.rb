@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-RSpec.describe GrpcServiceMesh::RPCRuntime do
+RSpec.describe ProtoServiceMesh::RPCRuntime do
   let(:client) { MemoryTransport::Client.new({"url" => "mem://hub"}, ServiceMaps::MEM, MemoryTransport::Bus.new) }
 
   let(:runtime) { MemoryTransport.runtime_lambda }
 
-  before { GrpcServiceMesh.add_transport("mem", client) }
+  before { ProtoServiceMesh.add_transport("mem", client) }
 
   it "builds the transport runtime with every endpoint and subscriber of its transport and the group in the config" do
     orders = Class.new(Shop::OrderService) do
@@ -16,7 +16,7 @@ RSpec.describe GrpcServiceMesh::RPCRuntime do
     end
     audit_target = ServiceMesh::Target.new(segments: %w[audit AuditService Record], kind: :topic, metadata: {"transport" => "mem"})
     http_target = ServiceMesh::Target.new(segments: %w[billing InvoiceService Made], kind: :topic, metadata: {"transport" => "http"})
-    audit = Class.new(GrpcServiceMesh::RPCService) do
+    audit = Class.new(ProtoServiceMesh::RPCService) do
       rpc :record, target: audit_target, input: Shop::Order, kind: :topic
       rpc :made, target: http_target, input: Shop::Order, kind: :topic
       def record(request)
@@ -25,8 +25,8 @@ RSpec.describe GrpcServiceMesh::RPCRuntime do
       def made(request)
       end
     end
-    GrpcServiceMesh.register(orders.new)
-    GrpcServiceMesh.register(audit.new)
+    ProtoServiceMesh.register(orders.new)
+    ProtoServiceMesh.register(audit.new)
 
     rpc_runtime = described_class.new(transport: "mem", deployment_group: "billing", runtime: runtime,
       config: {"url" => "mem://hub"})
@@ -64,7 +64,7 @@ RSpec.describe GrpcServiceMesh::RPCRuntime do
     counting = ->(*args, **kwargs) { calls << [args, kwargs] }
 
     expect { described_class.new(transport: "http", deployment_group: "shop", runtime: counting) }
-      .to raise_error(GrpcServiceMesh::UnknownTransport, 'unknown transport "http"')
+      .to raise_error(ProtoServiceMesh::UnknownTransport, 'unknown transport "http"')
     expect(calls).to eq([])
   end
 

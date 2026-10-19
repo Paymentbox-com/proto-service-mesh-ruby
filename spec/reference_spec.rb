@@ -4,7 +4,7 @@
 RSpec.describe "the reference Shop service and client" do
   before do
     client = MemoryTransport::Client.new({"url" => "memory"}, ServiceMaps::MEM, MemoryTransport::Bus.new)
-    GrpcServiceMesh.add_transport("mem", client)
+    ProtoServiceMesh.add_transport("mem", client)
   end
 
   let(:orders) do
@@ -17,7 +17,7 @@ RSpec.describe "the reference Shop service and client" do
 
       def place(request)
         if request.id.empty?
-          raise GrpcServiceMesh::MeshError.new(:INVALID_ARGUMENT, "id is required",
+          raise ProtoServiceMesh::MeshError.new(:INVALID_ARGUMENT, "id is required",
             Google::Rpc::BadRequest.new(field_violations: [{field: "id", description: "empty"}]),
             mesh_metadata: {"Retry-After" => "30"})
         end
@@ -33,8 +33,8 @@ RSpec.describe "the reference Shop service and client" do
   end
 
   it "serves a route and a topic through an RPCRuntime, carrying metadata both ways, and stops" do
-    GrpcServiceMesh.register(orders)
-    rpc_runtime = GrpcServiceMesh::RPCRuntime.new(transport: "mem", deployment_group: "shop", runtime: MemoryTransport.runtime_lambda)
+    ProtoServiceMesh.register(orders)
+    rpc_runtime = ProtoServiceMesh::RPCRuntime.new(transport: "mem", deployment_group: "shop", runtime: MemoryTransport.runtime_lambda)
     rpc_runtime.start
 
     place = Shop::Order.new(id: "o-1")
@@ -53,10 +53,10 @@ RSpec.describe "the reference Shop service and client" do
   end
 
   it "carries a MeshError with its details and metadata from the handler to the caller" do
-    GrpcServiceMesh.register(orders)
-    GrpcServiceMesh::RPCRuntime.new(transport: "mem", deployment_group: "shop", runtime: MemoryTransport.runtime_lambda).start
+    ProtoServiceMesh.register(orders)
+    ProtoServiceMesh::RPCRuntime.new(transport: "mem", deployment_group: "shop", runtime: MemoryTransport.runtime_lambda).start
 
-    expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(GrpcServiceMesh::MeshError) do |error|
+    expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(ProtoServiceMesh::MeshError) do |error|
       expect(error.code).to eq(:INVALID_ARGUMENT)
       expect(error.message).to eq("id is required")
       expect(error.details.first.unpack(Google::Rpc::BadRequest).field_violations.first.field).to eq("id")

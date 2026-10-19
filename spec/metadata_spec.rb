@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe GrpcServiceMesh::Metadata do
+RSpec.describe ProtoServiceMesh::Metadata do
   it "stores a new empty Hash on first read, so keys can be written into it" do
     order = Shop::Order.new
 

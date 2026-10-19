@@ -1,13 +1,13 @@
-# grpc-service-mesh-ruby
+# proto-service-mesh-ruby
 
-grpc-service-mesh-ruby is the Ruby implementation of the
-[gRPC Service Mesh API](https://github.com/Paymentbox-com/grpc-service-mesh-api).
+proto-service-mesh-ruby is the Ruby implementation of the
+[Proto Service Mesh API](https://github.com/Paymentbox-com/proto-service-mesh-api).
 It carries protobuf messages over any transport that implements the
 [Service Mesh API Specification](https://github.com/Paymentbox-com/service-mesh-api)
 through the Ruby contract in the `service_mesh` gem, from
 [service-mesh-ruby](https://github.com/Paymentbox-com/service-mesh-ruby).
 
-The `GrpcServiceMesh` module holds the specification's non-generated types:
+The `ProtoServiceMesh` module holds the specification's non-generated types:
 * `TransportRouter`
 * `Registry`
 * `RPCRuntime`
@@ -17,14 +17,14 @@ It also holds the two base classes that generated code builds on:
 * `RPCService`
 * `RPCClient`
 
-Generated code comes from `grpc-service-mesh-gen` in the specification
+Generated code comes from `proto-service-mesh-gen` in the specification
 repository and lives in a definitions project.
 
 ## Install
 
 ```ruby
 # Gemfile
-gem "grpc_service_mesh"
+gem "proto_service_mesh"
 ```
 
 Requires Ruby 3.3 or newer. The gem depends on `service_mesh`,
@@ -37,7 +37,7 @@ No transport is a dependency. The application adds the transport gem it uses.
 ## Usage
 
 An application uses this library through the generated code that depends on it. The
-[gRPC Service Mesh API](https://github.com/Paymentbox-com/grpc-service-mesh-api) describes how Ruby code is
+[Proto Service Mesh API](https://github.com/Paymentbox-com/proto-service-mesh-api) describes how Ruby code is
 generated from `.proto` files.
 
 ### Reference Examples
@@ -46,7 +46,7 @@ The examples in these docs use the reference definitions in `spec/support/defini
 `shop.OrderService`, with a `ROUTE` method `Place` and a `TOPIC` method `Placed`, in deployment group `shop` over the
 transport named `mem`, the in-memory transport the specs use. The generated module is `Shop`, and the generated
 per-transport maps are in `ServiceMaps`. The generated code is in `spec/support/testproto/`, written by
-`grpc-service-mesh-gen` as a consumer would generate it, and described under [Generated Code](docs/generated-code.md).
+`proto-service-mesh-gen` as a consumer would generate it, and described under [Generated Code](docs/generated-code.md).
 
 ## Documentation
 
@@ -55,5 +55,5 @@ per-transport maps are in `ServiceMaps`. The generated code is in `spec/support/
 - [Calling](docs/calling.md): calling generated clients, metadata and transport options, reply metadata, and the wire format
 - [MeshError](docs/mesherror.md): constructing and reading `MeshError`, and the errors the library raises
 - [Generated Code](docs/generated-code.md): the generated reference output for Ruby, and what generated code relies on in this library
-- [Public API](docs/public-api.md): every public constant and method in `GrpcServiceMesh`
+- [Public API](docs/public-api.md): every public constant and method in `ProtoServiceMesh`
 - [Development](docs/development.md): the specification protos, the recipes, and the tests

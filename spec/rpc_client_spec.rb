@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-RSpec.describe GrpcServiceMesh::RPCClient do
+RSpec.describe ProtoServiceMesh::RPCClient do
   # Routes "mem" to a RecordingClient running the block.
   def transport_client(&on_call)
     client = RecordingClient.new(&on_call)
-    GrpcServiceMesh.add_transport("mem", client)
+    ProtoServiceMesh.add_transport("mem", client)
     client
   end
 
@@ -72,7 +72,7 @@ RSpec.describe GrpcServiceMesh::RPCClient do
       status = Google::Rpc::Status.new(code: 5, message: "no such order", details: [Google::Protobuf::Any.pack(info)])
       transport_client { reply({"Content-Type" => "application/x-protobuf", "Grpc-Status" => "5", "Retry-After" => "30", "Mesh-Option-x" => "1"}, status.to_proto) }
 
-      expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(GrpcServiceMesh::NotFoundError) do |error|
+      expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(ProtoServiceMesh::NotFoundError) do |error|
         expect(error.code).to eq(:NOT_FOUND)
         expect(error.message).to eq("no such order")
         expect(error.details.map { |d| d.unpack(Google::Rpc::ErrorInfo) }).to eq([info])
@@ -83,7 +83,7 @@ RSpec.describe GrpcServiceMesh::RPCClient do
     it "raises INTERNAL with the reply's metadata when the response does not decode" do
       transport_client { reply({"Content-Type" => "application/x-protobuf", "Request-Id" => "r1"}, "\x80".b) }
 
-      expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(GrpcServiceMesh::MeshError) do |error|
+      expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(ProtoServiceMesh::MeshError) do |error|
         expect(error.code).to eq(:INTERNAL)
         expect(error.message).to include("shop.Order")
         expect(error.mesh_metadata).to eq({"Content-Type" => "application/x-protobuf", "Request-Id" => "r1"})
@@ -93,7 +93,7 @@ RSpec.describe GrpcServiceMesh::RPCClient do
     it "raises INTERNAL when the Status does not decode" do
       transport_client { reply({"Grpc-Status" => "5"}, "\x80".b) }
 
-      expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(GrpcServiceMesh::MeshError) do |error|
+      expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(ProtoServiceMesh::MeshError) do |error|
         expect(error.code).to eq(:INTERNAL)
         expect(error.message).to include("google.rpc.Status")
       end
@@ -114,7 +114,7 @@ RSpec.describe GrpcServiceMesh::RPCClient do
     end
 
     it "raises UnknownTransport when the target's transport is not configured" do
-      expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(GrpcServiceMesh::UnknownTransport, 'unknown transport "mem"')
+      expect { Shop::OrderClient.place(Shop::Order.new) }.to raise_error(ProtoServiceMesh::UnknownTransport, 'unknown transport "mem"')
     end
   end
 

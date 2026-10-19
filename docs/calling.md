@@ -15,19 +15,19 @@ raises.
 request = Shop::Order.new(item: "book")
 request.mesh_metadata = {
   "Tenant" => "acme",
-  GrpcServiceMesh::OPTION_PREFIX + "request_timeout" => "2"
+  ProtoServiceMesh::OPTION_PREFIX + "request_timeout" => "2"
 }
 
 begin
   order = Shop::OrderClient.place(request)
   puts order.id, order.mesh_metadata["Request-Id"]
-rescue GrpcServiceMesh::MeshError => e
+rescue ProtoServiceMesh::MeshError => e
   # e.code, e.message, e.details; a detail unpacks with unpack
   e.details.each do |d|
     info = d.unpack(Google::Rpc::ErrorInfo)
     puts info.reason if info
   end
-rescue GrpcServiceMesh::UnknownTransport
+rescue ProtoServiceMesh::UnknownTransport
   # the target's transport is not configured on the router
 end
 # Any other error is a Service Mesh API or transport error, unchanged, such as
@@ -44,7 +44,7 @@ A request that is not an instance of the rpc method's input class raises
 ## Metadata and Transport Options
 
 The keys of the request's `mesh_metadata` that start with `Mesh-Option-`
-(`GrpcServiceMesh::OPTION_PREFIX`) are transport options. A client method
+(`ProtoServiceMesh::OPTION_PREFIX`) are transport options. A client method
 removes them from the message metadata and passes each one to the transport's
 `request` or `publish` options with the prefix removed. The match is exact and
 case-sensitive.
@@ -77,7 +77,7 @@ message names the expected type, such as
 `reply does not decode as shop.Order: ...`.
 
 A transport name the router does not hold raises
-`GrpcServiceMesh::UnknownTransport`, a library error listed under
+`ProtoServiceMesh::UnknownTransport`, a library error listed under
 [Library Errors](mesherror.md#library-errors). Errors from the Service Mesh API
 and from the transport pass through unchanged.
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module GrpcServiceMesh
+module ProtoServiceMesh
   # Message metadata carried on a message object. Generated code includes it
   # into every message class an rpc takes or returns; MeshError includes it
   # too. The library sets it on the objects it builds and reads it from the

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module GrpcServiceMesh
+module ProtoServiceMesh
   # Base of every generated client class. Each declared rpc becomes a class
   # method, +name(request)+, that resolves the transport's Client through the
   # process router on every call. The request's mesh_metadata is read and left
@@ -57,7 +57,7 @@ module GrpcServiceMesh
     end
 
     def self.client_for(target)
-      GrpcServiceMesh.transport_router.client(target.metadata["transport"])
+      ProtoServiceMesh.transport_router.client(target.metadata["transport"])
     end
 
     # The message for +request+ and the transport options, split from the

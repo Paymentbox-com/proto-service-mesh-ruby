@@ -10,7 +10,7 @@ and tests used during development.
 `mesh/options.proto`. Loading it adds the file to the generated descriptor
 pool, which then resolves the extensions `mesh.kind`, `mesh.consumer_group`, `mesh.transport`, and `mesh.root_prefix`, and defines
 `Mesh::Kind`. It is compiled from the
-[grpc-service-mesh-api](https://github.com/Paymentbox-com/grpc-service-mesh-api)
+[proto-service-mesh-api](https://github.com/Paymentbox-com/proto-service-mesh-api)
 tag named by `spec_tag` in the `justfile`.
 
 The compiled forms of `google/rpc/*.proto` are the published ones in
@@ -22,12 +22,12 @@ The `*_pb.rb` file that protoc writes from it then calls
 gem.
 
 A project that runs plain `protoc` itself takes the specification's files from
-the directory that `grpc-service-mesh-gen proto-path` prints:
+the directory that `proto-service-mesh-gen proto-path` prints:
 
 ```sh
 protoc \
   -I definitions \
-  -I "$(grpc-service-mesh-gen proto-path)" \
+  -I "$(proto-service-mesh-gen proto-path)" \
   --ruby_out=lib/ruby \
   $(find definitions -name '*.proto')
 ```
@@ -41,7 +41,7 @@ the message types.
 
 `lib/mesh/options_pb.rb` is the compiled form of `mesh/options.proto` in the
 specification repository,
-[grpc-service-mesh-api](https://github.com/Paymentbox-com/grpc-service-mesh-api),
+[proto-service-mesh-api](https://github.com/Paymentbox-com/proto-service-mesh-api),
 at the tag `spec_tag` names in the `justfile`. It is never edited here. `just
 proto-spec` makes a shallow clone of that tag in a temporary directory,
 compiles `mesh/options.proto` from it with `protoc`, and removes the clone. CI
@@ -77,17 +77,17 @@ recipes.
 |---|---|
 | `just install` | Installs the gem's dependencies with Bundler. |
 | `just test` | Runs the test suite. |
-| `just build` | Builds the gem into `pkg/grpc_service_mesh-<version>.gem`. |
+| `just build` | Builds the gem into `pkg/proto_service_mesh-<version>.gem`. |
 | `just proto` | Runs `just proto-spec` and `just proto-test`. |
-| `just proto-spec` | Compiles `mesh/options.proto` from grpc-service-mesh-api at `spec_tag` into `lib/mesh/options_pb.rb`. |
-| `just proto-test` | Regenerates `spec/support/testproto/` from `spec/support/definitions/` with `grpc-service-mesh-gen` at `gen_version`. |
+| `just proto-spec` | Compiles `mesh/options.proto` from proto-service-mesh-api at `spec_tag` into `lib/mesh/options_pb.rb`. |
+| `just proto-test` | Regenerates `spec/support/testproto/` from `spec/support/definitions/` with `proto-service-mesh-gen` at `gen_version`. |
 | `just lint` | Reports lint findings with RuboCop. |
 | `just fmt` | Fixes lint findings in place with RuboCop. |
 | `just check` | Runs `lint`, `test`, and `build`, in the order CI runs them. |
 | `just tag` | Tags the current commit with the gem's version and pushes the tag. |
 | `just publish` | Pushes the built gem to rubygems.org. |
 | `just release` | Runs `tag`, `build`, and `publish`. |
-| `just bump patch`, `just bump minor`, `just bump major` | Raises the version in `lib/grpc_service_mesh/version.rb` by one step and commits that file alone. A minor bump resets the patch number, and a major bump resets both. |
+| `just bump patch`, `just bump minor`, `just bump major` | Raises the version in `lib/proto_service_mesh/version.rb` by one step and commits that file alone. A minor bump resets the patch number, and a major bump resets both. |
 
 Publishing is described in [publishing.md](../publishing.md).
 
@@ -100,7 +100,7 @@ in this repository needs a broker.
 `spec/support/testproto/` holds the reference output shown under
 [Generated Code](generated-code.md), generated from the definitions in
 `spec/support/definitions/`. `just proto-test` deletes the generated files and
-runs `grpc-service-mesh-gen` at `gen_version` to write them again. CI runs
+runs `proto-service-mesh-gen` at `gen_version` to write them again. CI runs
 `just proto` and fails when the result differs from what is committed.
 Adopting a new generator version means setting `gen_version`, running
 `just proto`, and reviewing the diff. Go is pinned in `mise.toml` because the

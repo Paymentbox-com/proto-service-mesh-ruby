@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module GrpcServiceMesh
+module ProtoServiceMesh
   # Base of every generated service class. The generated subclass declares its
   # rpcs; the application subclasses that and defines a method per rpc it
   # serves, taking the decoded request, whose mesh_metadata is the inbound

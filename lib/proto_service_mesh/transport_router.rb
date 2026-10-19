@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-module GrpcServiceMesh
+module ProtoServiceMesh
   # Holds one Client per transport name: the transport-specific Client the
   # application built and owns. The process router is
-  # GrpcServiceMesh.transport_router. Clients are added at boot; client is a
+  # ProtoServiceMesh.transport_router. Clients are added at boot; client is a
   # hash read.
   class TransportRouter
     def initialize

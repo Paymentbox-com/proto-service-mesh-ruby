@@ -1,4 +1,4 @@
-# Task runner for grpc_service_mesh. Run `just` with no arguments to see the menu.
+# Task runner for proto_service_mesh. Run `just` with no arguments to see the menu.
 #
 # Every Ruby recipe runs through `mise exec` so it uses the Ruby pinned in
 # mise.toml without relying on the shell's mise activation. If you run just from
@@ -7,7 +7,7 @@
 bundle := "mise exec -- bundle"
 
 # The version in the gemspec, which names the built gem file
-version := `mise exec -- ruby -e 'print Gem::Specification.load("grpc_service_mesh.gemspec").version'`
+version := `mise exec -- ruby -e 'print Gem::Specification.load("proto_service_mesh.gemspec").version'`
 protoc := env("PROTOC", "protoc")
 
 # List all recipes
@@ -24,16 +24,16 @@ install:
 test:
     {{bundle}} exec rspec
 
-# Build the gem into pkg/grpc_service_mesh-<version>.gem
+# Build the gem into pkg/proto_service_mesh-<version>.gem
 [group('build')]
 build:
     mkdir -p pkg
-    mise exec -- gem build grpc_service_mesh.gemspec --output pkg/grpc_service_mesh-{{version}}.gem
+    mise exec -- gem build proto_service_mesh.gemspec --output pkg/proto_service_mesh-{{version}}.gem
 
 # Push the built gem to rubygems.org; asks for the MFA code
 [group('release')]
 publish:
-    mise exec -- gem push pkg/grpc_service_mesh-{{version}}.gem
+    mise exec -- gem push pkg/proto_service_mesh-{{version}}.gem
 
 # Tag the current commit v<version> and push the tag; refuses a working tree with changes
 [group('release')]
@@ -46,34 +46,34 @@ tag:
 [group('release')]
 release: tag build publish
 
-# The grpc-service-mesh-api tag whose mesh/options.proto lib/mesh/options_pb.rb is compiled from
-spec_tag := "v0.9.0"
+# The proto-service-mesh-api tag whose mesh/options.proto lib/mesh/options_pb.rb is compiled from
+spec_tag := "v0.11.0"
 
 # Regenerate lib/mesh/options_pb.rb from the specification at {{spec_tag}}
 # and regenerate the specs' message classes
 [group('build')]
 proto: proto-spec proto-test
 
-# Compile mesh/options.proto from a shallow clone of grpc-service-mesh-api at {{spec_tag}} into lib/mesh/options_pb.rb
+# Compile mesh/options.proto from a shallow clone of proto-service-mesh-api at {{spec_tag}} into lib/mesh/options_pb.rb
 [group('build')]
 proto-spec:
     #!/usr/bin/env bash
     set -euo pipefail
     spec="$(mktemp -d)"
     trap 'rm -rf "$spec"' EXIT
-    git -c advice.detachedHead=false clone --quiet --depth 1 --branch {{spec_tag}} https://github.com/Paymentbox-com/grpc-service-mesh-api "$spec"
+    git -c advice.detachedHead=false clone --quiet --depth 1 --branch {{spec_tag}} https://github.com/Paymentbox-com/proto-service-mesh-api "$spec"
     {{protoc}} --proto_path="$spec" --ruby_out=lib "$spec/mesh/options.proto"
 
-# The grpc-service-mesh-gen version the reference output in spec/support/testproto is generated with
-gen_version := "v0.9.0"
+# The proto-service-mesh-gen version the reference output in spec/support/testproto is generated with
+gen_version := "v0.11.0"
 
-# Regenerate spec/support/testproto from spec/support/definitions with grpc-service-mesh-gen at {{gen_version}}
+# Regenerate spec/support/testproto from spec/support/definitions with proto-service-mesh-gen at {{gen_version}}
 [group('build')]
 proto-test:
     #!/usr/bin/env bash
     set -euo pipefail
     { grep -rl --include='*.rb' 'DO NOT EDIT' spec/support/testproto || true; } | xargs rm -f
-    mise exec -- go run github.com/Paymentbox-com/grpc-service-mesh-api/cmd/grpc-service-mesh-gen@{{gen_version}} \
+    mise exec -- go run github.com/Paymentbox-com/proto-service-mesh-api/cmd/proto-service-mesh-gen@{{gen_version}} \
         --definitions spec/support/definitions --ruby_out=spec/support/testproto
 
 # Report lint findings (matches CI)
@@ -90,7 +90,7 @@ fmt:
 [group('checks')]
 check: lint test build
 
-# Bump the version in lib/grpc_service_mesh/version.rb by one patch, minor, or major step and commit that file: just bump patch
+# Bump the version in lib/proto_service_mesh/version.rb by one patch, minor, or major step and commit that file: just bump patch
 [group('release')]
 bump part:
     #!/usr/bin/env bash
@@ -104,7 +104,7 @@ bump part:
       *) echo "part must be patch, minor, or major" >&2; exit 1 ;;
     esac
     next="${major}.${minor}.${patch}"
-    perl -pi -e "s/VERSION = \"$current\"/VERSION = \"$next\"/" lib/grpc_service_mesh/version.rb
-    grep -q "VERSION = \"$next\"" lib/grpc_service_mesh/version.rb || (echo "could not update lib/grpc_service_mesh/version.rb" >&2 && exit 1)
-    git commit -q -m "Release $next" -- lib/grpc_service_mesh/version.rb
+    perl -pi -e "s/VERSION = \"$current\"/VERSION = \"$next\"/" lib/proto_service_mesh/version.rb
+    grep -q "VERSION = \"$next\"" lib/proto_service_mesh/version.rb || (echo "could not update lib/proto_service_mesh/version.rb" >&2 && exit 1)
+    git commit -q -m "Release $next" -- lib/proto_service_mesh/version.rb
     echo "$current -> $next, committed"

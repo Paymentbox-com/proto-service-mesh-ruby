@@ -1,5 +1,5 @@
 // The reference definitions the specs and docs use. `just proto-test`
-// generates spec/support/testproto from them with grpc-service-mesh-gen.
+// generates spec/support/testproto from them with proto-service-mesh-gen.
 syntax = "proto3";
 
 package shop;

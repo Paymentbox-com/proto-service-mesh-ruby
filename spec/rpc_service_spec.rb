@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe GrpcServiceMesh::RPCService do
+RSpec.describe ProtoServiceMesh::RPCService do
   def inbound(target, payload, metadata = {"Content-Type" => "application/x-protobuf"})
     ServiceMesh::Message.new(target: target, metadata: metadata, payload: payload)
   end
@@ -126,7 +126,7 @@ RSpec.describe GrpcServiceMesh::RPCService do
     it "replies with the encoded Status and Grpc-Status when the handler raises a MeshError" do
       info = Google::Rpc::ErrorInfo.new(reason: "ORDER_CANCELLED", domain: "shop")
       service = Class.new(Shop::OrderService) do
-        define_method(:place) { |_request| raise GrpcServiceMesh::MeshError.new(:NOT_FOUND, "no such order", info) }
+        define_method(:place) { |_request| raise ProtoServiceMesh::MeshError.new(:NOT_FOUND, "no such order", info) }
       end.new
 
       reply = service.endpoints.first.handler.call(inbound(Shop::OrderTargets::PLACE, Shop::Order.new.to_proto))
@@ -141,7 +141,7 @@ RSpec.describe GrpcServiceMesh::RPCService do
     it "replies to a MeshError with the error's metadata" do
       service = Class.new(Shop::OrderService) do
         def place(_request)
-          raise GrpcServiceMesh::NotFoundError.new("no such order", mesh_metadata: {"Retry-After" => "30"})
+          raise ProtoServiceMesh::NotFoundError.new("no such order", mesh_metadata: {"Retry-After" => "30"})
         end
       end.new
 
@@ -153,7 +153,7 @@ RSpec.describe GrpcServiceMesh::RPCService do
     it "overwrites Content-Type and Grpc-Status set on a MeshError" do
       service = Class.new(Shop::OrderService) do
         def place(_request)
-          raise GrpcServiceMesh::NotFoundError.new("no such order", mesh_metadata: {"Content-Type" => "text/plain", "Grpc-Status" => "0"})
+          raise ProtoServiceMesh::NotFoundError.new("no such order", mesh_metadata: {"Content-Type" => "text/plain", "Grpc-Status" => "0"})
         end
       end.new
 
@@ -165,7 +165,7 @@ RSpec.describe GrpcServiceMesh::RPCService do
     it "drops Mesh-Option- keys set on a MeshError" do
       service = Class.new(Shop::OrderService) do
         def place(_request)
-          raise GrpcServiceMesh::NotFoundError.new("no such order", mesh_metadata: {"Retry-After" => "30", "Mesh-Option-request_timeout" => "2"})
+          raise ProtoServiceMesh::NotFoundError.new("no such order", mesh_metadata: {"Retry-After" => "30", "Mesh-Option-request_timeout" => "2"})
         end
       end.new
 

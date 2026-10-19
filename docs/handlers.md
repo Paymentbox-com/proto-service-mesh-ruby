@@ -20,7 +20,7 @@ the `TOPIC` rpc method `placed`, with the message class each one takes and
 returns:
 
 ```ruby
-class OrderService < GrpcServiceMesh::RPCService
+class OrderService < ProtoServiceMesh::RPCService
   rpc :place, target: OrderTargets::PLACE, input: Shop::Order, output: Shop::Order, kind: :route
   rpc :placed, target: OrderTargets::PLACED, input: Shop::Order, kind: :topic
 end
@@ -57,7 +57,7 @@ class Orders < Shop::OrderService
   end
 end
 
-GrpcServiceMesh.register(Orders.new(db_model, logger))
+ProtoServiceMesh.register(Orders.new(db_model, logger))
 ```
 
 An instance serves every rpc method that has a method defined on its class, or
@@ -75,7 +75,7 @@ Metadata](#message-metadata).
 ```ruby
 def place(request)
   if request.mesh_metadata["Tenant"].to_s.empty?
-    raise GrpcServiceMesh::InvalidArgumentError.new("Tenant is required",
+    raise ProtoServiceMesh::InvalidArgumentError.new("Tenant is required",
       Google::Rpc::ErrorInfo.new(reason: "MISSING_TENANT", domain: "shop"))
   end
   order = @db_model.create(request.item)
@@ -93,7 +93,7 @@ and `InvalidArgumentError`, take the message and any detail messages.
 ```ruby
 def place(request)
   unless @db_model.in_stock?(request.item)
-    raise GrpcServiceMesh::NotFoundError.new("no such item",
+    raise ProtoServiceMesh::NotFoundError.new("no such item",
       Google::Rpc::ErrorInfo.new(reason: "ITEM_MISSING", domain: "shop"))
   end
   order = @db_model.create(request.item)
@@ -135,7 +135,7 @@ metadata.
 ```ruby
 def place(request)
   unless @db_model.in_stock?(request.item)
-    raise GrpcServiceMesh::NotFoundError.new("no such item", mesh_metadata: {"Retry-After" => "30"})
+    raise ProtoServiceMesh::NotFoundError.new("no such item", mesh_metadata: {"Retry-After" => "30"})
   end
   record = @db_model.create(request.item)
   order = Shop::Order.new(id: record.id, item: record.item)
@@ -160,7 +160,7 @@ the message type, such as `request does not decode as shop.Order: ...`.
 ## Message Metadata
 
 Message metadata travels on the message objects themselves. The generated
-code includes the `GrpcServiceMesh::Metadata` module into every message class
+code includes the `ProtoServiceMesh::Metadata` module into every message class
 that an rpc method takes or returns. The module adds two methods.
 
 | Method | Behavior |

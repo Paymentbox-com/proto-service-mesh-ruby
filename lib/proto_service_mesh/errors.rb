@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module GrpcServiceMesh
+module ProtoServiceMesh
   # Base of the errors this library raises for misuse of its own contract.
   # MeshError is an application error and stands apart from this tree.
   class Error < StandardError; end

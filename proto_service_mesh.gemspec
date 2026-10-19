@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
-require_relative "lib/grpc_service_mesh/version"
+require_relative "lib/proto_service_mesh/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "grpc_service_mesh"
-  spec.version = GrpcServiceMesh::VERSION
+  spec.name = "proto_service_mesh"
+  spec.version = ProtoServiceMesh::VERSION
   spec.authors = ["Bryant Morrill", "Paymentbox"]
   spec.email = ["bryantreadmorrill@gmail.com"]
-  spec.summary = "Ruby library for the gRPC Service Mesh API"
-  spec.homepage = "https://github.com/Paymentbox-com/grpc-service-mesh-ruby"
+  spec.summary = "Ruby library for the Proto Service Mesh API"
+  spec.homepage = "https://github.com/Paymentbox-com/proto-service-mesh-ruby"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.3"
 
@@ -21,5 +21,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "google-protobuf", "~> 4.26"
   spec.add_dependency "googleapis-common-protos-types", "~> 1.15"
-  spec.add_dependency "service_mesh", "~> 0.4"
+  spec.add_dependency "service_mesh", "~> 0.4", "< 0.7"
 end
